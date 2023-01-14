@@ -6,6 +6,7 @@ pub struct Video {
     pub description: Option<String>,
     pub madeforkids: Option<bool>,
     pub tags: Vec<String>,
+    pub automatic_chapters: Option<bool>,
 }
 
 #[allow(dead_code)]
@@ -17,6 +18,8 @@ impl Video {
             description: None,
             madeforkids: None,
             tags: vec![],
+            automatic_chapters: None,
+        
         }
     }
 
@@ -49,4 +52,10 @@ impl Video {
     pub fn get_tags_for_text_input(&self) -> String {
         self.tags.join(",") + "\n"
     }
+
+    pub fn add_automatic_chapters(mut self, automatic_chapters: bool) -> Self {
+        self.automatic_chapters = Some(automatic_chapters);
+        self
+    }
+
 }

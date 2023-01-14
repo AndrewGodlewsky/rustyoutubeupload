@@ -66,9 +66,7 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
 
     // Click the show more button
     webdriver
-        .query(By::Css(
-            "div[class='toggle-section style-scope ytcp-video-metadata-editor']",
-        ))
+        .query(By::Css("div[class='toggle-section style-scope ytcp-video-metadata-editor']"))
         .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
         .first()
         .await?
@@ -82,11 +80,37 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
     // Adding Tags to the textbox.
     webdriver
         .query(By::XPath(r"/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-ve/ytcp-video-metadata-editor/div/ytcp-video-metadata-editor-advanced/div[5]/ytcp-form-input-container/div[1]/div/ytcp-free-text-chip-bar/ytcp-chip-bar/div/input"))
-        .wait(Duration::from_secs_f32(20.0), Duration::from_secs_f32(1.0))
+        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
         .first()
         .await?
         .send_keys(&video.get_tags_for_text_input())
         .await?;
+
+        //Checking if Automatic chapters checkbox is checked 
+        let automatic_chapters_str  = webdriver.query(By::Css("ytcp-checkbox-lit[ class='style-scope ytcp-form-checkbox']"))
+            .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
+            .first()
+            .await?
+            .attr("aria-checked")
+            .await?
+            .unwrap();
+        
+        dbg!(&automatic_chapters_str);
+
+        //When automatic_chapters_str and automatic_chapters are not equal, then run! 
+        if !((automatic_chapters_str == "true") && (video.automatic_chapters.unwrap())) {
+            // Click Automatic chapters button
+            webdriver
+                .query(By::Css("div[class='input-container style-scope ytcp-video-metadata-editor-advanced']"))
+                .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
+                .first()
+                .await?
+                .find(By::Css("div[id='checkbox-container']"))
+                .await?
+                .click()
+                .await?;
+        }
+
 
     Ok(())
 }
@@ -108,7 +132,9 @@ async fn main() -> WebDriverResult<()> {
         .add_title("Test Title")
         .add_description("Test description")
         .add_madeforkids(true)
-        .add_tags(vec!["Minecraft", "MC"]);
+        .add_tags(vec!["Minecraft", "MC"])
+        .add_automatic_chapters(true);
+    
 
     let result = preform_upload(&mut webdriver, video).await;
 
