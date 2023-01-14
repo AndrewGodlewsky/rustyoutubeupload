@@ -35,7 +35,7 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
         .await?
         .find(By::Css("div[id='textbox']"))
         .await?
-        .send_keys(&video.title)
+        .send_keys(&video.title.clone().unwrap_or_default())
         .await?;
 
     // Add video description to textbox
@@ -48,7 +48,7 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
         .await?
         .find(By::Css("div[id='textbox']"))
         .await?
-        .send_keys(&video.description)
+        .send_keys(&video.description.clone().unwrap_or_default())
         .await?;
 
     // Checking the `not` option for Kids button
@@ -98,17 +98,17 @@ async fn main() -> WebDriverResult<()> {
     let caps = DesiredCapabilities::chrome();
     let mut webdriver = WebDriver::new("http://localhost:9515", caps).await?;
 
-    let video = Video {
-        title: "Test Title".to_string(),
-        description: "Test description".to_string(),
-        path: format!(
-            "{}/{}",
-            std::env::current_dir().unwrap().to_str().unwrap(),
-            r"video.mp4" // Dont use hard coded path here
-        ),
-        madeforkids: "false".to_string(),
-        tags: vec!["Minecraft".to_string(), "MC".to_string()],
-    };
+    let path = format!(
+        "{}/{}",
+        std::env::current_dir().unwrap().to_str().unwrap(),
+        r"video.mp4" // Dont use hard coded path here
+    );
+
+    let video = Video::new(&path)
+        .add_title("Test Title")
+        .add_description("Test description")
+        .add_madeforkids(true)
+        .add_tags(vec!["Minecraft", "MC"]);
 
     let result = preform_upload(&mut webdriver, video).await;
 

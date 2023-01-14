@@ -56,7 +56,7 @@ async fn get_specific_version(version: String) -> String {
     let major_version = version
         .split('.')
         .next()
-        .expect(" Could not Parse Major Version number of Chrome")
+        .expect("Could not Parse Major Version number of Chrome")
         .to_owned();
 
     // Using the locally installed version of googlechrome, we can retreive a
