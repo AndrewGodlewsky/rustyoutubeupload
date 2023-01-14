@@ -66,7 +66,9 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
 
     // Click the show more button
     webdriver
-        .query(By::Css("div[class='toggle-section style-scope ytcp-video-metadata-editor']"))
+        .query(By::Css(
+            "div[class='toggle-section style-scope ytcp-video-metadata-editor']",
+        ))
         .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
         .first()
         .await?
@@ -86,22 +88,35 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
         .send_keys(&video.get_tags_for_text_input())
         .await?;
 
-        //Checking if Automatic chapters checkbox is checked 
-        let automatic_chapters_str  = webdriver.query(By::Css("ytcp-checkbox-lit[ class='style-scope ytcp-form-checkbox']"))
-            .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-            .first()
-            .await?
-            .attr("aria-checked")
-            .await?
-            .unwrap();
-        
-        dbg!(&automatic_chapters_str);
+    //Checking if Automatic chapters checkbox is checked
+    let automatic_chapters_str = webdriver
+        .query(By::Css(
+            "ytcp-checkbox-lit[ class='style-scope ytcp-form-checkbox']",
+        ))
+        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
+        .first()
+        .await?
+        .attr("aria-checked")
+        .await?
+        .unwrap();
 
-        //When automatic_chapters_str and automatic_chapters are not equal, then run! 
-        if !((automatic_chapters_str == "true") && (video.automatic_chapters.unwrap())) {
+    // dbg!(&automatic_chapters_str);
+
+    //When automatic_chapters_str and automatic_chapters are not equal, then run!
+    match (
+        video.automatic_chapters.is_some(),
+        (automatic_chapters_str == "true"),
+        video.automatic_chapters.unwrap_or_default(),
+    ) {
+        (false, _, _) => {}
+        (true, true, true) => {}
+        (true, false, false) => {}
+        (_, _, _) => {
             // Click Automatic chapters button
             webdriver
-                .query(By::Css("div[class='input-container style-scope ytcp-video-metadata-editor-advanced']"))
+                .query(By::Css(
+                    "div[class='input-container style-scope ytcp-video-metadata-editor-advanced']",
+                ))
                 .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
                 .first()
                 .await?
@@ -110,7 +125,7 @@ async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverRes
                 .click()
                 .await?;
         }
-
+    }
 
     Ok(())
 }
@@ -132,9 +147,8 @@ async fn main() -> WebDriverResult<()> {
         .add_title("Test Title")
         .add_description("Test description")
         .add_madeforkids(true)
-        .add_tags(vec!["Minecraft", "MC"])
-        .add_automatic_chapters(true);
-    
+        .add_tags(vec!["Minecraft", "MC"]);
+    // .add_automatic_chapters(true);
 
     let result = preform_upload(&mut webdriver, video).await;
 
