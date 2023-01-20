@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = "1.23.1"
-reqwest = { version = "0.11.13", features = ["json"] }
+tokio = "1.24.2"
+reqwest = { version = "0.11.14", features = ["json"] }
 
 selenium-rs = "0.1.2"
 thirtyfour = "0.31.0"
@@ -15,7 +15,7 @@ terminal_color_builder = "0.1.1"
 
 zip = "0.6.3"
 
-serde = { version = "1.0.151", features = ["derive"] }
+serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 serde_xml = "0.9.1"
-roxmltree = "0.16.0"
+roxmltree = "0.17.0"
