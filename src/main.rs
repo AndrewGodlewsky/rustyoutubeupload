@@ -10,7 +10,7 @@ mod video;
 use chromedriver::ChromeDriver;
 use video::Video;
 
-async fn preform_upload(webdriver: &mut WebDriver, video: Video) -> WebDriverResult<()> {
+async fn preform_upload(webdriver: &mut WebDriver, video: &Video) -> WebDriverResult<()> {
     webdriver.goto("https://www.youtube.com").await?;
     cookies::add_cookie(webdriver).await?;
 
@@ -137,27 +137,23 @@ async fn main() -> WebDriverResult<()> {
     let caps = DesiredCapabilities::chrome();
     let mut webdriver = WebDriver::new("http://localhost:9515", caps).await?;
 
-    let path = format!(
-        "{}/{}",
-        std::env::current_dir().unwrap().to_str().unwrap(),
-        r"video.mp4" // Dont use hard coded path here
-    );
+    // Deserialized the list of videos
+    let json_data = std::fs::read_to_string("data.json")
+        .expect("No data.json file found. Please create one...");
+    let videos: Vec<Video> = serde_json::from_str(&json_data).unwrap();
 
-    let video = Video::new(&path)
-        .add_title("Test Title")
-        .add_description("Test description")
-        .add_madeforkids(true)
-        .add_tags(vec!["Minecraft", "MC"]);
-    // .add_automatic_chapters(true);
+    // preform upload proecess on every video
+    for video in videos {
+        let result = preform_upload(&mut webdriver, &video).await;
 
-    let result = preform_upload(&mut webdriver, video).await;
-
-    match result {
-        Ok(_) => println!("Successfully Ran Process"),
-        Err(e) => println!(
-            "Process Failed! Error : {}",
-            tcb::new().fg().red().text(e.to_string()).print()
-        ),
+        match result {
+            Ok(_) => println!("Video '{:?}' uploaded Successfully", &video.title),
+            Err(e) => println!(
+                "Video upload '{:?}' Failed! Error : {}",
+                &video.title,
+                tcb::new().fg().red().text(e.to_string()).print()
+            ),
+        }
     }
 
     // Always explicitly close the browser, then close the chrome driver.

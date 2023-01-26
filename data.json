@@ -1,0 +1,13 @@
+[
+  {
+    "path": "video.mp4",
+    "title": "Test Title",
+    "description": "Test description",
+    "madeforkids": true,
+    "tags": [
+      "Minecraft",
+      "MC"
+    ],
+    "automatic_chapters": null
+  }
+]

@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 // This should use a builder pattern
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Video {
     pub path: String,
     pub title: Option<String>,
@@ -19,7 +21,6 @@ impl Video {
             madeforkids: None,
             tags: vec![],
             automatic_chapters: None,
-        
         }
     }
 
@@ -57,5 +58,4 @@ impl Video {
         self.automatic_chapters = Some(automatic_chapters);
         self
     }
-
 }
