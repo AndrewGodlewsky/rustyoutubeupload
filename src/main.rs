@@ -1,165 +1,103 @@
 use std::time::Duration;
 
+use fs_extra::file::*;
 use terminal_color_builder::OutputFormatter as tcb;
 use thirtyfour::prelude::*;
 
 mod chromedriver;
 mod cookies;
+mod python;
+mod upload;
 mod video;
 
 use chromedriver::ChromeDriver;
 use video::Video;
 
-async fn preform_upload(webdriver: &mut WebDriver, video: &Video) -> WebDriverResult<()> {
-    webdriver.goto("https://www.youtube.com").await?;
-    cookies::add_cookie(webdriver).await?;
+fn clean_up(video_files: &[std::fs::DirEntry]) {
+    // Archive the input video
+    let copy_options = &CopyOptions::new().overwrite(true);
 
-    webdriver.goto("https://www.youtube.com/upload").await?;
+    for v in video_files {
+        let path = v.path();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
 
-    // Find hidden input text box and pass text into to specify the video path.
-    webdriver
-        .query(By::Css("input[type='file']"))
-        .wait(Duration::from_secs_f32(15.0), Duration::from_secs_f32(0.50))
-        .first()
-        .await?
-        .send_keys(&video.path)
-        .await?;
-
-    // Add video title to textbox
-    webdriver
-        .query(By::Css(
-            "div[class='input-container title style-scope ytcp-video-metadata-editor-basics']",
-        ))
-        .wait(Duration::from_secs_f32(60.0), Duration::from_secs_f32(1.0))
-        .first()
-        .await?
-        .find(By::Css("div[id='textbox']"))
-        .await?
-        .send_keys(&video.title.clone().unwrap_or_default())
-        .await?;
-
-    // Add video description to textbox
-    webdriver
-        .query(By::Css(
-            "div[class='input-container description style-scope ytcp-video-metadata-editor-basics']"
-        ))
-        .wait(Duration::from_secs_f32(60.0), Duration::from_secs_f32(1.0))
-        .first()
-        .await?
-        .find(By::Css("div[id='textbox']"))
-        .await?
-        .send_keys(&video.description.clone().unwrap_or_default())
-        .await?;
-
-    // Checking the `not` option for Kids button
-    webdriver
-        .query(By::Css("div[class='input-container style-scope ytcp-video-metadata-editor-basics']"))
-        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-        .first()
-        .await?
-        .query (By::XPath(r"//*[@id='audience']/ytkc-made-for-kids-select/div[4]/tp-yt-paper-radio-group/tp-yt-paper-radio-button[2]"))
-        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-        .first()
-        .await?
-        .click()
-        .await?;
-
-    // Click the show more button
-    webdriver
-        .query(By::Css(
-            "div[class='toggle-section style-scope ytcp-video-metadata-editor']",
-        ))
-        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-        .first()
-        .await?
-        .query(By::XPath(r"//*[@id='toggle-button']"))
-        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-        .first()
-        .await?
-        .click()
-        .await?;
-
-    // Adding Tags to the textbox.
-    webdriver
-        .query(By::XPath(r"/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-ve/ytcp-video-metadata-editor/div/ytcp-video-metadata-editor-advanced/div[5]/ytcp-form-input-container/div[1]/div/ytcp-free-text-chip-bar/ytcp-chip-bar/div/input"))
-        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-        .first()
-        .await?
-        .send_keys(&video.get_tags_for_text_input())
-        .await?;
-
-    //Checking if Automatic chapters checkbox is checked
-    let automatic_chapters_str = webdriver
-        .query(By::Css(
-            "ytcp-checkbox-lit[ class='style-scope ytcp-form-checkbox']",
-        ))
-        .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-        .first()
-        .await?
-        .attr("aria-checked")
-        .await?
+        move_file(
+            "Input/".to_string() + file_name,
+            "Input/Archive/".to_string() + file_name,
+            copy_options,
+        )
         .unwrap();
-
-    // dbg!(&automatic_chapters_str);
-
-    //When automatic_chapters_str and automatic_chapters are not equal, then run!
-    match (
-        video.automatic_chapters.is_some(),
-        (automatic_chapters_str == "true"),
-        video.automatic_chapters.unwrap_or_default(),
-    ) {
-        (false, _, _) => {}
-        (true, true, true) => {}
-        (true, false, false) => {}
-        (_, _, _) => {
-            // Click Automatic chapters button
-            webdriver
-                .query(By::Css(
-                    "div[class='input-container style-scope ytcp-video-metadata-editor-advanced']",
-                ))
-                .wait(Duration::from_secs_f32(5.0), Duration::from_secs_f32(0.10))
-                .first()
-                .await?
-                .find(By::Css("div[id='checkbox-container']"))
-                .await?
-                .click()
-                .await?;
-        }
     }
 
-    Ok(())
+    // Archive the clips
+    let video_clip_files = std::fs::read_dir("Clips/")
+        .unwrap()
+        .map(|d| d.unwrap())
+        .filter(|d| d.file_type().unwrap().is_file())
+        .filter(|d| d.path().extension().unwrap() == "mp4")
+        .collect::<Vec<std::fs::DirEntry>>();
+
+    for v in video_clip_files {
+        let path = v.path();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+        move_file(
+            "Clips/".to_string() + file_name,
+            "Clips/Archive/".to_string() + file_name,
+            copy_options,
+        )
+        .unwrap();
+    }
+
+    // Archive the clips data
+    move_file("Clips/data.json", "Clips/Archive/data.json", copy_options).unwrap();
 }
 
-#[tokio::main]
-async fn main() -> WebDriverResult<()> {
-    let mut chromedriver = ChromeDriver::new().await;
+// #[tokio::main]
+// async fn main() {
+fn main() {
+    python::install_requirements();
 
-    let caps = DesiredCapabilities::chrome();
-    let mut webdriver = WebDriver::new("http://localhost:9515", caps).await?;
+    loop {
+        std::fs::create_dir_all("Input/Archive").unwrap();
+        std::fs::create_dir_all("Clips/Archive").unwrap();
+        std::fs::create_dir_all("Music").unwrap();
 
-    // Deserialized the list of videos
-    let json_data = std::fs::read_to_string("data.json")
-        .expect("No data.json file found. Please create one...");
-    let videos: Vec<Video> = serde_json::from_str(&json_data).unwrap();
+        std::thread::sleep(Duration::from_secs_f32(1.0));
 
-    // preform upload proecess on every video
-    for video in videos {
-        let result = preform_upload(&mut webdriver, &video).await;
+        let video_files = std::fs::read_dir("Input/")
+            .unwrap()
+            .map(|d| d.unwrap())
+            .filter(|d| d.file_type().unwrap().is_file())
+            .filter(|d| d.path().extension().unwrap() == "mp4")
+            .collect::<Vec<std::fs::DirEntry>>();
 
-        match result {
-            Ok(_) => println!("Video '{:?}' uploaded Successfully", &video.title),
-            Err(e) => println!(
-                "Video upload '{:?}' Failed! Error : {}",
-                &video.title,
-                tcb::new().fg().red().text(e.to_string()).print()
-            ),
+        if video_files.len() == 0 {
+            continue;
         }
+
+        println!(
+            "Videos Found: {:?}",
+            video_files
+                .iter()
+                .map(|v| v.path().into_os_string())
+                .collect::<Vec<std::ffi::OsString>>()
+        );
+
+        python::run();
+
+        let json_result = std::fs::read_to_string("Clips/data.json");
+
+        if json_result.is_err() {
+            continue;
+        }
+
+        let videos: Vec<Video> = serde_json::from_str(&json_result.unwrap()).unwrap();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        // rt.spawn(async {
+        //     // upload::start(videos).await.unwrap();
+        // });
+
+        clean_up(&video_files);
     }
-
-    // Always explicitly close the browser, then close the chrome driver.
-    // webdriver.quit().await?;
-
-    chromedriver.stop_driver().await;
-
-    Ok(())
 }

@@ -1,5 +1,9 @@
 /target
 /chromedriver
+/Configs/cookies.json
+/Clips
+/Input
+/Music
 *.png
-configs/cookies.json
 *.mp4
+*.mp3

@@ -1,2 +1,8 @@
 # RustYoutubeUploader
-This repo is for the creation of a selenium based uploader written in Rust
+
+## Clip generator
+Automatically makes video clips
+
+## Youtube uploader
+Selenium based uploader written in Rust
+

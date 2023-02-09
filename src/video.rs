@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // This should use a builder pattern
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Video {
     pub path: String,
     pub title: Option<String>,
